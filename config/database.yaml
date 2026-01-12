@@ -1,0 +1,121 @@
+# Database configuration for Executive Analytics Assistant
+
+# Connection settings
+connection:
+  host: localhost
+  port: 5432
+  database: lending_club
+  user: analyst
+  password: lending_secure_pass_2024  # Override with env var DB_PASSWORD
+  
+# Connection pool settings
+pool:
+  min_size: 2
+  max_size: 10
+  timeout: 30
+  command_timeout: 60
+  max_queries: 50000
+  max_inactive_connection_lifetime: 300
+
+# Query settings
+query:
+  default_limit: 1000
+  max_limit: 10000
+  timeout_seconds: 30
+  enable_query_cache: true
+  cache_ttl_minutes: 60
+
+# Schema information
+schema:
+  main_table: loans
+  views:
+    - loan_summary_stats
+    - loan_grade_analysis
+    - monthly_loan_trends
+  
+  # Column mappings for natural language
+  column_mappings:
+    "loan amount": "loan_amnt"
+    "interest rate": "int_rate"
+    "annual income": "annual_inc"
+    "loan grade": "grade"
+    "loan status": "loan_status"
+    "state": "addr_state"
+    "issue date": "issue_d"
+    "employment length": "emp_length"
+    "home ownership": "home_ownership"
+    "debt to income": "dti"
+    "purpose": "purpose"
+    "term": "term"
+
+# Data types for validation
+data_types:
+  loans:
+    loan_amnt: numeric
+    int_rate: numeric
+    grade: string
+    sub_grade: string
+    loan_status: string
+    annual_inc: numeric
+    issue_d: date
+    addr_state: string
+    purpose: string
+    term: string
+    dti: numeric
+
+# Business logic
+business_rules:
+  grades:
+    - A
+    - B
+    - C
+    - D
+    - E
+    - F
+    - G
+  
+  loan_statuses:
+    active:
+      - Current
+      - In Grace Period
+      - Late (16-30 days)
+      - Late (31-120 days)
+    completed:
+      - Fully Paid
+    defaulted:
+      - Default
+      - Charged Off
+    other:
+      - Issued
+  
+  terms:
+    - "36 months"
+    - "60 months"
+  
+  purposes:
+    - debt_consolidation
+    - credit_card
+    - home_improvement
+    - other
+    - major_purchase
+    - small_business
+    - car
+    - wedding
+    - medical
+    - moving
+    - vacation
+    - house
+    - renewable_energy
+    - educational
+
+# Performance monitoring
+monitoring:
+  slow_query_threshold_ms: 1000
+  enable_query_logging: true
+  log_level: INFO
+
+# Backup and maintenance
+maintenance:
+  enable_auto_vacuum: true
+  analyze_threshold: 1000
+  index_usage_tracking: true

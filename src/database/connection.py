@@ -109,6 +109,14 @@ class DatabaseConnection:
 db = DatabaseConnection()
 
 
+def get_database_url() -> str:
+    """Get the database URL from environment or default"""
+    return os.getenv(
+        "DATABASE_URL",
+        "postgresql://analyst:lending_secure_pass_2024@localhost:5432/lending_club"
+    )
+
+
 # Dependency for FastAPI
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for database sessions"""

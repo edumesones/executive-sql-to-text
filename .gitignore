@@ -87,6 +87,6 @@ docker-compose.override.yml
 *.temp
 *.swp
 *~
-.md
+*.md
 !README.md
 docs/

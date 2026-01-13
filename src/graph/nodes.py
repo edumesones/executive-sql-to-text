@@ -88,7 +88,7 @@ async def analyst_agent_node(state: Dict[str, Any]) -> Dict[str, Any]:
     with TimerContext() as timer:
         try:
             agent = AnalystAgent()
-            result = agent.process(state)
+            result = await agent.process(state)
             
             logger.info(
                 "analyst_agent_completed",

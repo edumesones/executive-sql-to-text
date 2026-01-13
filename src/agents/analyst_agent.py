@@ -21,7 +21,7 @@ class AnalystAgent(BaseAgent):
         self.sql_executor = get_sql_executor()
         self.metric_calculator = MetricCalculator()
     
-    def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute SQL query and analyze results
         
@@ -41,10 +41,7 @@ class AnalystAgent(BaseAgent):
         
         try:
             # Execute query (async)
-            loop = asyncio.get_event_loop()
-            results, metadata = loop.run_until_complete(
-                self.sql_executor.execute_query(sql_query)
-            )
+            results, metadata = await self.sql_executor.execute_query(sql_query)
             
             # Validate results
             quality_issues = self._validate_data_quality(results)

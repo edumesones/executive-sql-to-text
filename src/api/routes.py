@@ -4,14 +4,20 @@ API Routes for Executive Analytics Assistant
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 import uuid
+import os
 
 from .schemas import QueryRequest, QueryResponse, HealthResponse, ErrorResponse
 from ..graph import get_workflow, create_initial_state
 from ..utils.logging import get_logger
+from ..utils.custom_tracer import get_local_tracer
 from ..database.connection import test_connection
 
 # Get logger
 logger = get_logger("api.routes")
+
+# Initialize Local JSON Tracer
+local_tracer = get_local_tracer(enabled=True)
+logger.info("local_json_tracer_initialized", trace_dir="traces")
 
 # Create router
 router = APIRouter(prefix="/api", tags=["analytics"])
@@ -44,8 +50,9 @@ async def execute_query(request: QueryRequest):
             session_id=request.session_id
         )
         
-        # Execute workflow
-        result = await workflow.ainvoke(state)
+        # Execute workflow with local JSON tracing
+        config = {"callbacks": [local_tracer]} if local_tracer else {}
+        result = await workflow.ainvoke(state, config=config)
         
         # Log completion
         logger.info(

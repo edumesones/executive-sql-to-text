@@ -58,7 +58,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         'annual_inc': 0.0
     })
     
-    print(f"✓ Data cleaned: {len(df)} rows")
+    print(f"OK Data cleaned: {len(df)} rows")
     return df
 
 
@@ -83,9 +83,9 @@ def load_data_to_db(csv_path: Path, batch_size: int = 10000):
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        print("✓ Database connection successful")
+        print("OK Database connection successful")
     except Exception as e:
-        print(f"✗ Database connection failed: {e}")
+        print(f"ERROR Database connection failed: {e}")
         print("\nMake sure Docker containers are running:")
         print("  docker-compose up -d")
         sys.exit(1)
@@ -93,19 +93,20 @@ def load_data_to_db(csv_path: Path, batch_size: int = 10000):
     # Read CSV
     print(f"\nReading CSV: {csv_path}")
     if not csv_path.exists():
-        print(f"✗ File not found: {csv_path}")
+        print(f"ERROR File not found: {csv_path}")
         print("\nRun 'python scripts/download_data.py' first")
         sys.exit(1)
     
     df = pd.read_csv(csv_path)
-    print(f"✓ Loaded {len(df):,} rows with {len(df.columns)} columns")
+    print(f"OK Loaded {len(df):,} rows with {len(df.columns)} columns")
     
     # Clean data
     df = clean_data(df)
     
     # Map columns to database schema
+    # Note: 'id' field is SERIAL (auto-generated), so we map loan_id correctly
     column_mapping = {
-        'id': 'loan_id',
+        'loan_id': 'loan_id',
         'member_id': 'member_id',
         'loan_amnt': 'loan_amnt',
         'funded_amnt': 'funded_amnt', 
@@ -148,7 +149,7 @@ def load_data_to_db(csv_path: Path, batch_size: int = 10000):
         # Delete sample data first
         conn.execute(text("DELETE FROM loans WHERE loan_id LIKE 'SAMPLE%'"))
         conn.commit()
-    print("✓ Existing data cleared")
+    print("OK Existing data cleared")
     
     # Insert data in batches
     print(f"\nInserting {len(df_db):,} rows in batches of {batch_size}...")
@@ -161,14 +162,14 @@ def load_data_to_db(csv_path: Path, batch_size: int = 10000):
             total_inserted += len(batch)
             pbar.update(len(batch))
     
-    print(f"\n✓ Successfully inserted {total_inserted:,} rows")
+    print(f"\nOK Successfully inserted {total_inserted:,} rows")
     
     # Verify data
     print("\nVerifying data...")
     with engine.connect() as conn:
         result = conn.execute(text("SELECT COUNT(*) FROM loans"))
         count = result.scalar()
-        print(f"✓ Total rows in database: {count:,}")
+        print(f"OK Total rows in database: {count:,}")
         
         result = conn.execute(text("""
             SELECT 
@@ -189,7 +190,7 @@ def load_data_to_db(csv_path: Path, batch_size: int = 10000):
         print(f"  Avg interest rate: {stats[4]:.2f}%")
     
     print("\n" + "=" * 60)
-    print("✓ Database seeding completed successfully!")
+    print("OK Database seeding completed successfully!")
     print("=" * 60)
     print("\nNext steps:")
     print("  1. Start the API: uvicorn src.api.main:app --reload")
@@ -204,7 +205,7 @@ if __name__ == "__main__":
     csv_files = list(data_dir.glob("*.csv"))
     
     if not csv_files:
-        print("✗ No CSV files found in data/raw/")
+        print("ERROR No CSV files found in data/raw/")
         print("\nRun 'python scripts/download_data.py' first")
         sys.exit(1)
     
@@ -215,7 +216,7 @@ if __name__ == "__main__":
     try:
         load_data_to_db(csv_path)
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\nERROR Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

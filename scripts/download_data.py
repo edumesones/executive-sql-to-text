@@ -32,7 +32,7 @@ def download_file(url: str, dest_path: Path, chunk_size: int = 8192) -> None:
                     percent = (downloaded / total_size) * 100
                     print(f"\rProgress: {percent:.1f}%", end='')
     
-    print(f"\n✓ Downloaded to {dest_path}")
+    print(f"\nDownloaded to {dest_path}")
 
 
 def extract_zip(zip_path: Path, extract_dir: Path) -> None:
@@ -42,7 +42,7 @@ def extract_zip(zip_path: Path, extract_dir: Path) -> None:
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_dir)
     
-    print(f"✓ Extracted to {extract_dir}")
+    print(f"Extracted to {extract_dir}")
 
 
 def download_lending_club_data(
@@ -75,7 +75,7 @@ def download_lending_club_data(
     # Install: pip install kaggle
     # Setup: https://github.com/Kaggle/kaggle-api#api-credentials
     
-    print("\n⚠️  IMPORTANT: Dataset Download Instructions")
+    print("\nIMPORTANT: Dataset Download Instructions")
     print("-" * 60)
     print("This script requires manual dataset download.")
     print("\nOption 1: Download from Kaggle (Recommended)")
@@ -87,16 +87,11 @@ def download_lending_club_data(
     print("\nOption 2: Use sample data (Quick start)")
     print("  We'll create a sample dataset for testing")
     
-    choice = input("\nCreate sample dataset for testing? (y/n): ").strip().lower()
-    
-    if choice == 'y':
-        sample_path = output_dir / "lending_club_sample.csv"
-        create_sample_data(sample_path, sample_size)
-        return sample_path
-    else:
-        print("\n✓ Please download the dataset manually and run again.")
-        print(f"  Expected location: {output_dir / 'accepted_2007_to_2018Q4.csv'}")
-        sys.exit(1)
+    # Auto-create sample data for testing (no input needed)
+    print("\nCreating sample dataset for testing...")
+    sample_path = output_dir / "lending_club_sample.csv"
+    create_sample_data(sample_path, sample_size)
+    return sample_path
 
 
 def create_sample_data(output_path: Path, num_rows: int = 100000):
@@ -152,7 +147,7 @@ def create_sample_data(output_path: Path, num_rows: int = 100000):
     
     # Save to CSV
     df.to_csv(output_path, index=False)
-    print(f"✓ Sample data created: {output_path}")
+    print(f"Sample data created: {output_path}")
     print(f"  Rows: {len(df):,}")
     print(f"  Columns: {len(df.columns)}")
     print(f"  File size: {output_path.stat().st_size / 1024 / 1024:.1f} MB")
@@ -164,5 +159,5 @@ if __name__ == "__main__":
         print(f"\n✓ Dataset ready: {csv_path}")
         print("\nNext step: Run 'python scripts/seed_database.py' to load data into PostgreSQL")
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\nError: {e}")
         sys.exit(1)

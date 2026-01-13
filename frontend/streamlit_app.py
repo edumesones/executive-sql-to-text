@@ -20,7 +20,7 @@ st.set_page_config(
 )
 
 # API Configuration
-API_URL = "http://localhost:8000"
+API_URL = "http://localhost:8001"
 
 
 def initialize_session_state():

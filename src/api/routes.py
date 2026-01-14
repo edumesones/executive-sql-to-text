@@ -15,9 +15,13 @@ from ..database.connection import test_connection
 # Get logger
 logger = get_logger("api.routes")
 
-# Initialize Local JSON Tracer
-local_tracer = get_local_tracer(enabled=True)
-logger.info("local_json_tracer_initialized", trace_dir="traces")
+# Initialize Local JSON Tracer (with error handling)
+try:
+    local_tracer = get_local_tracer(enabled=True)
+    logger.info("local_json_tracer_initialized", trace_dir="traces")
+except Exception as e:
+    logger.warning("local_json_tracer_init_failed", error=str(e))
+    local_tracer = None
 
 # Create router
 router = APIRouter(prefix="/api", tags=["analytics"])
@@ -99,22 +103,33 @@ async def health_check():
     Returns:
         HealthResponse with service and database status
     """
-    logger.info("health_check_requested")
-    
     try:
-        # Test database connection
-        db_connected = test_connection()
-        db_status = "connected" if db_connected else "disconnected"
+        logger.info("health_check_requested")
         
-        logger.info("health_check_completed", database=db_status)
+        # Test database connection with error handling
+        db_connected = False
+        db_status = "error"
+        
+        try:
+            db_connected = test_connection()
+            db_status = "connected" if db_connected else "disconnected"
+        except Exception as db_error:
+            logger.warning("database_connection_test_failed", error=str(db_error))
+            db_status = "error"
+        
+        # Service is healthy even if DB is disconnected (degraded mode)
+        service_status = "healthy" if db_connected else "degraded"
+        
+        logger.info("health_check_completed", status=service_status, database=db_status)
         
         return HealthResponse(
-            status="healthy" if db_connected else "degraded",
+            status=service_status,
             database=db_status
         )
         
     except Exception as e:
         logger.error("health_check_error", error=str(e), exc_info=True)
+        # Return unhealthy status but don't raise exception
         return HealthResponse(
             status="unhealthy",
             database="error"

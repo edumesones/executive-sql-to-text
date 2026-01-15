@@ -9,7 +9,13 @@ from pathlib import Path
 
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-from langchain.schema import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage
+
+# Configure LangSmith tracing
+os.environ.setdefault("LANGSMITH_TRACING", "true")
+os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+os.environ.setdefault("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+# LANGSMITH_API_KEY and LANGCHAIN_PROJECT should be set in .env
 
 
 class BaseAgent(ABC):
@@ -48,20 +54,31 @@ class BaseAgent(ABC):
         temperature = self.config.get('temperature', 0.0)
         max_tokens = self.config.get('max_tokens', 2000)
         
+        # LangSmith metadata for tracing
+        metadata = {
+            "agent_name": self.agent_name,
+            "model": model_name
+        }
+        tags = [self.agent_name, "executive-analytics"]
+        
         # Determine provider from model name
         if model_name.startswith('gpt'):
             return ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                api_key=os.getenv('OPENAI_API_KEY')
+                api_key=os.getenv('OPENAI_API_KEY'),
+                metadata=metadata,
+                tags=tags
             )
         elif model_name.startswith('claude'):
             return ChatAnthropic(
                 model=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                api_key=os.getenv('ANTHROPIC_API_KEY')
+                api_key=os.getenv('ANTHROPIC_API_KEY'),
+                metadata=metadata,
+                tags=tags
             )
         else:
             raise ValueError(f"Unsupported model: {model_name}")

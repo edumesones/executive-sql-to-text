@@ -1,0 +1,67 @@
+{
+  "run_id": "019bb722-e71c-74e1-8753-b34dbd2cd9b3",
+  "parent_run_id": "019bb722-e715-7e11-ac3e-d0da61683d2b",
+  "type": "llm",
+  "start_time": "2026-01-13T12:34:36.571900",
+  "tags": [
+    "seq:step:1",
+    "insight_agent",
+    "executive-analytics"
+  ],
+  "metadata": {
+    "langgraph_step": 4,
+    "langgraph_node": "insight_agent",
+    "langgraph_triggers": [
+      "branch:viz_agent:should_continue:insight_agent"
+    ],
+    "langgraph_path": [
+      "__pregel_pull",
+      "insight_agent"
+    ],
+    "checkpoint_ns": "insight_agent:755496a8-eaed-f176-d0ab-c19f109f4c54",
+    "ls_provider": "openai",
+    "ls_model_name": "gpt-4o-mini",
+    "ls_model_type": "chat",
+    "ls_temperature": 0.4,
+    "ls_max_tokens": 1000,
+    "agent_name": "insight_agent",
+    "model": "gpt-4o-mini"
+  },
+  "model": "gpt-4o-mini",
+  "prompts": [
+    "System: You are a senior business analyst presenting insights to C-level executives.\nYour role is to translate data into actionable business insights.\n\nGuidelines:\n1. Start with the most important finding (headline)\n2. Provide 2-4 bullet points with key insights\n3. Include comparisons (vs previous period, vs average, vs benchmark)\n4. Suggest actionable recommendations when relevant\n5. Use business language, not technical jargon\n6. Highlight risks or opportunities\n\nFormat:\n- Use clear, concise sentences\n- Quantify findings with numbers\n- Avoid hedging language (\"might\", \"could\", \"possibly\")\n\nHuman: \n        You are a senior business analyst presenting insights to executives.\n        \n        User Question: Muestra el monto promedio de préstamos por grado\n        \n        Data Summary:\n        Query returned 7 rows.\n        \n        \n        Sample Data (first 5 rows):\n        1. grade: A, average_loan_amount: 19943.324107025175\n2. grade: B, average_loan_amount: 20091.906611669537\n3. grade: C, average_loan_amount: 20065.755286405244\n4. grade: D, average_loan_amount: 20013.849717969380\n5. grade: E, average_loan_amount: 20032.245262426828\n        \n        Generate 3-5 concise business insights in bullet points.\n        Then provide 2-3 actionable recommendations.\n        \n        Format your response as:\n        \n        INSIGHTS:\n        - [insight 1]\n        - [insight 2]\n        - [insight 3]\n        \n        RECOMMENDATIONS:\n        - [recommendation 1]\n        - [recommendation 2]\n        \n        Use clear, executive-friendly language with quantified findings.\n        "
+  ],
+  "prompts_preview": [
+    "System: You are a senior business analyst presenting insights to C-level executives.\nYour role is to translate data into actionable business insights.\n\nGuidelines:\n1. Start with the most important fin..."
+  ],
+  "end_time": "2026-01-13T12:34:41.213004",
+  "generations": [
+    {
+      "text": "INSIGHTS:\n- The average loan amount for Grade A borrowers is $19,943, which is the lowest among all grades, indicating a potential opportunity to attract higher-quality borrowers with competitive offers.\n- Grade B borrowers have an average loan amount of $20,092, closely followed by Grade C at $20,066, suggesting that these segments are similar in borrowing capacity and may require targeted marketing strategies.\n- The average loan amounts for Grades D and E are $20,014 and $20,032, respectively, showing minimal variation and indicating that these segments may be less sensitive to loan amount differences.\n\nRECOMMENDATIONS:\n- Develop tailored loan products for Grade A borrowers to increase their borrowing amounts, potentially enhancing overall portfolio value.\n- Implement targeted marketing campaigns for Grade B and C borrowers, focusing on their similar profiles to optimize conversion rates and increase loan uptake.\n- Monitor the performance of Grades D and E closely; consider introducing incentives to encourage larger loan amounts, thereby increasing revenue from these segments.",
+      "text_preview": "INSIGHTS:\n- The average loan amount for Grade A borrowers is $19,943, which is the lowest among all grades, indicating a potential opportunity to attract higher-quality borrowers with competitive offe..."
+    }
+  ],
+  "llm_output": {
+    "token_usage": {
+      "completion_tokens": 200,
+      "prompt_tokens": 378,
+      "total_tokens": 578,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0
+      }
+    },
+    "model_provider": "openai",
+    "model_name": "gpt-4o-mini-2024-07-18",
+    "system_fingerprint": "fp_29330a9688",
+    "id": "chatcmpl-CxWxRpDDPb3uasSlgpv3eOHtXiEHa",
+    "service_tier": "default"
+  },
+  "duration_seconds": 4.641104
+}

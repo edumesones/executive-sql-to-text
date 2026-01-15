@@ -16,6 +16,12 @@ from ..utils.logging import setup_logging, get_logger
 # Load environment variables
 load_dotenv()
 
+# Configure LangSmith tracing explicitly
+os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGSMITH_TRACING", "true")
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGSMITH_API_KEY", "")
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "executive-analytics-assistant")
+os.environ["LANGCHAIN_ENDPOINT"] = os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+
 # Setup logging
 setup_logging(
     log_level=os.getenv("LOG_LEVEL", "INFO"),
@@ -28,6 +34,17 @@ logger = get_logger("api.main")
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     logger.info("application_startup", version="0.1.0")
+    
+    # Log LangSmith configuration
+    langsmith_enabled = os.getenv("LANGCHAIN_TRACING_V2", "false")
+    langsmith_project = os.getenv("LANGCHAIN_PROJECT", "unknown")
+    logger.info(
+        "langsmith_configuration",
+        enabled=langsmith_enabled,
+        project=langsmith_project,
+        has_api_key=bool(os.getenv("LANGCHAIN_API_KEY"))
+    )
+    
     yield
     logger.info("application_shutdown")
 

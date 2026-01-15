@@ -10,6 +10,22 @@ import plotly.graph_objects as go
 from datetime import datetime
 from typing import Optional, Dict, Any
 import pandas as pd
+import os
+import tempfile
+import io
+
+# Audio recording and speech recognition imports
+try:
+    from audio_recorder_streamlit import audio_recorder
+    AUDIO_RECORDER_AVAILABLE = True
+except ImportError:
+    AUDIO_RECORDER_AVAILABLE = False
+
+try:
+    import speech_recognition as sr
+    SPEECH_RECOGNITION_AVAILABLE = True
+except ImportError:
+    SPEECH_RECOGNITION_AVAILABLE = False
 
 # Page configuration
 st.set_page_config(
@@ -31,6 +47,8 @@ def initialize_session_state():
         st.session_state.query_history = []
     if 'current_result' not in st.session_state:
         st.session_state.current_result = None
+    if 'audio_transcribed' not in st.session_state:
+        st.session_state.audio_transcribed = None
 
 
 def call_api(query: str) -> Optional[Dict[str, Any]]:
@@ -63,9 +81,149 @@ def check_api_health() -> bool:
     """Check if API is available"""
     try:
         response = requests.get(f"{API_URL}/api/health", timeout=5)
-        return response.status_code == 200
-    except:
+        if response.status_code == 200:
+            return True
+        else:
+            st.error(f"API returned status {response.status_code}")
+            return False
+    except requests.exceptions.ConnectionError as e:
+        st.error(f"❌ Cannot connect to API at {API_URL}. Is the server running?")
         return False
+    except requests.exceptions.Timeout:
+        st.error(f"⏱️ API request timed out. Server may be slow or unresponsive.")
+        return False
+    except Exception as e:
+        st.error(f"❌ Error checking API health: {str(e)}")
+        return False
+
+
+def transcribe_audio(audio_bytes: bytes, language: str = "en-US") -> Optional[str]:
+    """
+    Transcribe audio bytes to text using speech recognition
+    
+    Args:
+        audio_bytes: Audio data in bytes (WAV format)
+        language: Language code for recognition (default: en-US)
+        
+    Returns:
+        Transcribed text or None if error
+    """
+    if not SPEECH_RECOGNITION_AVAILABLE:
+        st.error("❌ Speech recognition no está disponible")
+        return None
+    
+    # Log inicial
+    st.write("🔍 **Logs de transcripción:**")
+    st.write(f"📊 Tamaño del audio: {len(audio_bytes)} bytes")
+    
+    try:
+        # Create a temporary file to save audio
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+            tmp_file.write(audio_bytes)
+            tmp_file_path = tmp_file.name
+        
+        st.write(f"💾 Audio guardado temporalmente en: {tmp_file_path}")
+        
+        # Initialize recognizer
+        recognizer = sr.Recognizer()
+        st.write("✅ Reconocedor inicializado")
+        
+        # Load audio file
+        with sr.AudioFile(tmp_file_path) as source:
+            # Adjust for ambient noise
+            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            audio_data = recognizer.record(source)
+        
+        st.write(f"🎵 Audio cargado. Duración estimada: {len(audio_data.frame_data) / audio_data.sample_rate:.2f} segundos")
+        
+        # Try different recognition engines
+        transcribed_text = None
+        
+        # Try Google Speech Recognition first (requires API key)
+        google_api_key = os.getenv("GOOGLE_SPEECH_API_KEY")
+        if google_api_key:
+            st.write("🌐 Intentando transcripción con Google Speech Recognition...")
+            try:
+                transcribed_text = recognizer.recognize_google(
+                    audio_data, 
+                    language=language,
+                    key=google_api_key
+                )
+                st.write(f"✅ **Google Speech Recognition:** Texto transcrito = '{transcribed_text}'")
+                st.success("✅ Audio transcribed using Google Speech Recognition")
+            except sr.UnknownValueError:
+                st.write("⚠️ Google Speech Recognition no pudo entender el audio (audio muy bajo o incomprensible)")
+                st.warning("⚠️ Google Speech Recognition could not understand the audio")
+            except sr.RequestError as e:
+                st.write(f"❌ Error de Google Speech Recognition: {str(e)}")
+                st.warning(f"⚠️ Google Speech Recognition error: {str(e)}")
+        else:
+            st.write("ℹ️ Google Speech Recognition no configurado (falta GOOGLE_SPEECH_API_KEY)")
+        
+        # Fallback to Whisper (offline, no API key needed)
+        if not transcribed_text:
+            st.write("🤖 Intentando transcripción con Whisper (offline)...")
+            try:
+                # Check if whisper is available
+                try:
+                    import whisper
+                    st.write("✅ Módulo Whisper disponible")
+                except ImportError:
+                    st.write("❌ Whisper no está instalado")
+                    st.warning("⚠️ Whisper no está instalado. Instalando dependencias necesarias...")
+                    st.info("💡 Para usar Whisper offline, instala: `uv pip install openai-whisper`")
+                    st.info("💡 O usa Google Speech Recognition configurando GOOGLE_SPEECH_API_KEY en .env")
+                    return None
+                
+                st.write("🔄 Procesando audio con Whisper (esto puede tardar unos segundos)...")
+                transcribed_text = recognizer.recognize_whisper(
+                    audio_data,
+                    language=language.split("-")[0] if "-" in language else language
+                )
+                st.write(f"✅ **Whisper:** Texto transcrito = '{transcribed_text}'")
+                st.success("✅ Audio transcribed using Whisper (offline)")
+            except ImportError as e:
+                st.write(f"❌ Error de importación: {str(e)}")
+                st.error(f"❌ Módulo faltante: {str(e)}")
+                st.info("💡 Instala las dependencias: `uv pip install soundfile pydub openai-whisper`")
+                return None
+            except Exception as e:
+                error_msg = str(e)
+                st.write(f"❌ Error durante transcripción Whisper: {error_msg}")
+                if "soundfile" in error_msg.lower():
+                    st.error("❌ Error: Falta el módulo 'soundfile'")
+                    st.info("💡 Instala con: `cd D:\\gestoria_agentes && uv pip install soundfile`")
+                else:
+                    st.error(f"❌ Speech recognition error: {error_msg}")
+                return None
+        
+        # Verificar resultado
+        if transcribed_text:
+            st.write(f"✅ **Transcripción exitosa:** '{transcribed_text}'")
+            st.write(f"📏 Longitud del texto: {len(transcribed_text)} caracteres")
+        else:
+            st.write("❌ **No se pudo transcribir el audio**")
+            st.write("💡 Posibles causas:")
+            st.write("   - Audio demasiado corto o silencioso")
+            st.write("   - Calidad de audio baja")
+            st.write("   - Ruido de fondo excesivo")
+            st.write("   - Idioma no reconocido")
+        
+        # Clean up temporary file
+        try:
+            os.unlink(tmp_file_path)
+            st.write(f"🗑️ Archivo temporal eliminado: {tmp_file_path}")
+        except Exception as e:
+            st.write(f"⚠️ No se pudo eliminar archivo temporal: {str(e)}")
+        
+        return transcribed_text
+        
+    except Exception as e:
+        st.write(f"❌ **Error general procesando audio:** {str(e)}")
+        st.error(f"❌ Error processing audio: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+        return None
 
 
 def display_metrics_summary(metrics: Dict[str, Any]):
@@ -222,18 +380,83 @@ def main():
         st.info("Run: `python run_api.py` in your terminal")
         return
     
-    # Query input
-    default_query = st.session_state.get('example_query', '')
-    query = st.text_input(
-        "Your question:",
-        value=default_query,
-        placeholder="e.g., Show me the top 10 loans by amount",
-        key="query_input"
-    )
+    # Query input section
+    st.subheader("💬 Ask Your Question")
     
-    # Clear example query after use
-    if 'example_query' in st.session_state:
-        del st.session_state.example_query
+    # Tabs for text and voice input
+    input_tab1, input_tab2 = st.tabs(["✍️ Text Input", "🎤 Voice Input"])
+    
+    query = ""
+    
+    with input_tab1:
+        # Text input
+        default_query = st.session_state.get('example_query', '')
+        
+        # Priorizar texto transcrito de audio (NO eliminar hasta que se use para analizar)
+        if st.session_state.get('audio_transcribed'):
+            default_query = st.session_state.audio_transcribed
+            st.success(f"🎤 **Texto transcrito desde audio:** '{default_query}'")
+            st.info("💡 Este texto está listo para analizar. Presiona el botón 'Analyze' abajo.")
+        
+        query = st.text_input(
+            "Type your question:",
+            value=default_query,
+            placeholder="e.g., Show me the top 10 loans by amount",
+            key="query_input"
+        )
+        
+        # Mostrar el valor actual del campo
+        if query:
+            st.write(f"📝 **Texto actual en el campo:** '{query}'")
+        elif st.session_state.get('audio_transcribed'):
+            # Si el campo está vacío pero hay texto transcrito, mostrarlo
+            st.warning(f"⚠️ El campo está vacío, pero hay texto transcrito: '{st.session_state.audio_transcribed}'")
+            st.info("💡 El texto transcrito se usará automáticamente al presionar 'Analyze'.")
+        
+        # Clear example query after use
+        if 'example_query' in st.session_state:
+            del st.session_state.example_query
+    
+    with input_tab2:
+        # Voice input
+        if not AUDIO_RECORDER_AVAILABLE:
+            st.warning("⚠️ Audio recording not available. Please install: `pip install audio-recorder-streamlit`")
+        elif not SPEECH_RECOGNITION_AVAILABLE:
+            st.warning("⚠️ Speech recognition not available. Please install: `pip install SpeechRecognition`")
+        else:
+            st.markdown("**Record your question:**")
+            st.info("💡 Click the microphone button below to start recording. Click again to stop.")
+            
+            # Audio recorder
+            audio_bytes = audio_recorder(
+                text="Click to record",
+                recording_color="#e74c3c",
+                neutral_color="#6c757d",
+                icon_name="microphone",
+                icon_size="2x",
+                pause_threshold=2.0
+            )
+            
+            if audio_bytes:
+                st.audio(audio_bytes, format="audio/wav")
+                st.write(f"📊 Audio recibido: {len(audio_bytes)} bytes")
+                
+                # Transcribe button
+                if st.button("🎯 Transcribe Audio", type="primary"):
+                    with st.spinner("🎤 Transcribing audio..."):
+                        transcribed = transcribe_audio(audio_bytes)
+                        if transcribed and transcribed.strip():
+                            # Guardar texto transcrito (NO modificar query_input directamente)
+                            st.session_state.audio_transcribed = transcribed.strip()
+                            st.success(f"📝 **Texto transcrito:** '{transcribed.strip()}'")
+                            st.info("💡 El texto ha sido copiado al campo de entrada. Cambia a la pestaña 'Text Input' para verlo y analizarlo.")
+                            st.rerun()
+                        else:
+                            st.error("❌ Could not transcribe audio. Please try again.")
+                            if transcribed is None:
+                                st.warning("⚠️ La transcripción devolvió None. Revisa los logs arriba para más detalles.")
+                            elif transcribed.strip() == "":
+                                st.warning("⚠️ La transcripción está vacía. El audio puede ser demasiado corto o silencioso.")
     
     # Analyze button
     col1, col2 = st.columns([1, 5])
@@ -246,15 +469,26 @@ def main():
     
     # Process query
     if analyze_button:
-        if not query:
-            st.warning("Please enter a question")
+        # Usar texto transcrito si el campo está vacío
+        query_to_analyze = query
+        if not query_to_analyze and st.session_state.get('audio_transcribed'):
+            query_to_analyze = st.session_state.audio_transcribed
+            st.info(f"🎤 Usando texto transcrito: '{query_to_analyze}'")
+            # Limpiar después de usar
+            del st.session_state.audio_transcribed
+        
+        if not query_to_analyze:
+            st.warning("⚠️ Please enter a question or transcribe audio first")
         else:
-            with st.spinner("🤔 Analyzing your question..."):
-                result = call_api(query)
+            with st.spinner(f"🤔 Analyzing: '{query_to_analyze}'..."):
+                result = call_api(query_to_analyze)
                 
                 if result:
-                    st.session_state.query_history.append(query)
+                    st.session_state.query_history.append(query_to_analyze)
                     st.session_state.current_result = result
+                    # Limpiar audio_transcribed después de analizar exitosamente
+                    if 'audio_transcribed' in st.session_state:
+                        del st.session_state.audio_transcribed
                     st.rerun()
     
     # Display results

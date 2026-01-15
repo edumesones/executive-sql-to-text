@@ -1,0 +1,67 @@
+{
+  "run_id": "019bb722-df7a-72e2-acb4-3cb65bb1f281",
+  "parent_run_id": "019bb722-df71-70f2-a0da-178637ba65f3",
+  "type": "llm",
+  "start_time": "2026-01-13T12:34:34.618088",
+  "tags": [
+    "seq:step:1",
+    "sql_agent",
+    "executive-analytics"
+  ],
+  "metadata": {
+    "langgraph_step": 1,
+    "langgraph_node": "sql_agent",
+    "langgraph_triggers": [
+      "start:sql_agent"
+    ],
+    "langgraph_path": [
+      "__pregel_pull",
+      "sql_agent"
+    ],
+    "checkpoint_ns": "sql_agent:8ce1a9d1-3254-4685-7c1b-1f437a7d4144",
+    "ls_provider": "openai",
+    "ls_model_name": "gpt-4o-mini",
+    "ls_model_type": "chat",
+    "ls_temperature": 0.0,
+    "ls_max_tokens": 2000,
+    "agent_name": "sql_agent",
+    "model": "gpt-4o-mini"
+  },
+  "model": "gpt-4o-mini",
+  "prompts": [
+    "System: You are an expert SQL query generator for PostgreSQL databases.\nYour role is to convert natural language questions into safe, efficient SQL queries.\n\nCRITICAL RULES:\n1. ONLY generate SELECT queries - never modify data\n2. Always use proper SQL syntax for PostgreSQL\n3. Include appropriate WHERE, GROUP BY, ORDER BY clauses\n4. Use LIMIT for large result sets (default: 1000)\n5. Generate queries that are safe from SQL injection\n6. Return ONLY the SQL query, no explanations\n\nAvailable tables:\n- loans: Main table with loan data (see schema below)\n- loan_summary_stats: Pre-calculated summary statistics\n- loan_grade_analysis: Grade-level aggregations\n- monthly_loan_trends: Time-series trends\n\nHuman: \n        Available table: loans\n        \n        Key columns:\n        - loan_amnt: Loan amount in dollars (NUMERIC)\n        - int_rate: Interest rate as percentage (NUMERIC)\n        - grade: Loan grade A-G (VARCHAR)\n        - sub_grade: Detailed grade like A1, B2 (VARCHAR)\n        - loan_status: Current, Fully Paid, Charged Off, Default, etc. (VARCHAR)\n        - annual_inc: Borrower's annual income (NUMERIC)\n        - purpose: Loan purpose like debt_consolidation, credit_card (VARCHAR)\n        - addr_state: US state code (VARCHAR)\n        - term: Loan term like '36 months' or '60 months' (VARCHAR)\n        - issue_d: Loan issue date (DATE)\n        - dti: Debt-to-income ratio (NUMERIC)\n        - home_ownership: RENT, OWN, MORTGAGE, etc. (VARCHAR)\n        - emp_length: Employment length (VARCHAR)\n        \n        Common loan_status values:\n        - 'Current' - Active and up to date\n        - 'Fully Paid' - Successfully completed\n        - 'Charged Off' - Defaulted\n        - 'Default' - In default\n        - 'Late (31-120 days)' - Delinquent\n        \n        Example queries:\n        1. \"Top 10 loan amounts\" → SELECT loan_amnt, grade FROM loans ORDER BY loan_amnt DESC LIMIT 10\n        2. \"Default rate by grade\" → SELECT grade, COUNT(*) as total, \n           COUNT(CASE WHEN loan_status IN ('Charged Off', 'Default') THEN 1 END) as defaults\n           FROM loans GROUP BY grade ORDER BY grade\n        \n        \n        User Question: Muestra el monto promedio de préstamos por grado\n        \n        Generate a PostgreSQL SELECT query that answers this question.\n        Requirements:\n        - Use only SELECT statements\n        - Include LIMIT clause (default 1000 for safety)\n        - Use proper column names from schema\n        - Handle NULL values appropriately\n        - Format numbers and dates correctly\n        \n        Return ONLY the SQL query, no explanations or markdown.\n        "
+  ],
+  "prompts_preview": [
+    "System: You are an expert SQL query generator for PostgreSQL databases.\nYour role is to convert natural language questions into safe, efficient SQL queries.\n\nCRITICAL RULES:\n1. ONLY generate SELECT qu..."
+  ],
+  "end_time": "2026-01-13T12:34:36.240639",
+  "generations": [
+    {
+      "text": "SELECT grade, AVG(loan_amnt) as average_loan_amount \nFROM loans \nGROUP BY grade \nORDER BY grade \nLIMIT 1000;",
+      "text_preview": "SELECT grade, AVG(loan_amnt) as average_loan_amount \nFROM loans \nGROUP BY grade \nORDER BY grade \nLIMIT 1000;"
+    }
+  ],
+  "llm_output": {
+    "token_usage": {
+      "completion_tokens": 31,
+      "prompt_tokens": 602,
+      "total_tokens": 633,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0
+      }
+    },
+    "model_provider": "openai",
+    "model_name": "gpt-4o-mini-2024-07-18",
+    "system_fingerprint": "fp_29330a9688",
+    "id": "chatcmpl-CxWxP57iMdrbBhcwpAG4aczWCasFJ",
+    "service_tier": "default"
+  },
+  "duration_seconds": 1.622551
+}

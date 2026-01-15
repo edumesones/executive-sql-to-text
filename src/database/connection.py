@@ -105,14 +105,49 @@ class DatabaseConnection:
         self.sync_engine.dispose()
 
 
-# Global database instance
-db = DatabaseConnection()
+# Global database instance (lazy initialization)
+_db_instance: Optional[DatabaseConnection] = None
+
+
+def _get_db_instance() -> DatabaseConnection:
+    """Get or create database instance (lazy initialization)"""
+    global _db_instance
+    if _db_instance is None:
+        try:
+            _db_instance = DatabaseConnection()
+        except Exception as e:
+            print(f"Error creating database connection: {e}")
+            raise
+    return _db_instance
+
+
+# Lazy database instance - initialized on first access
+class _LazyDB:
+    """Lazy wrapper for database connection"""
+    def __getattr__(self, name):
+        return getattr(_get_db_instance(), name)
+    
+    def __call__(self):
+        return _get_db_instance()
+
+
+# Global database instance (lazy)
+db = _LazyDB()
+
+
+def get_database_url() -> str:
+    """Get the database URL from environment or default"""
+    return os.getenv(
+        "DATABASE_URL",
+        "postgresql://analyst:lending_secure_pass_2024@localhost:5432/lending_club"
+    )
 
 
 # Dependency for FastAPI
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for database sessions"""
-    async for session in db.get_async_session():
+    db_instance = _get_db_instance()
+    async for session in db_instance.get_async_session():
         yield session
 
 
@@ -124,7 +159,8 @@ def test_connection() -> bool:
         True if database is accessible, False otherwise
     """
     try:
-        with db.sync_engine.connect() as conn:
+        db_instance = _get_db_instance()
+        with db_instance.sync_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return True
     except Exception as e:

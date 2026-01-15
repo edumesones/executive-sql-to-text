@@ -1,0 +1,67 @@
+{
+  "run_id": "019bb72a-77af-71b2-960a-4b45a4a4503f",
+  "parent_run_id": "019bb72a-77a6-74b0-b172-3b9728cde481",
+  "type": "llm",
+  "start_time": "2026-01-13T12:42:52.335468",
+  "tags": [
+    "seq:step:1",
+    "insight_agent",
+    "executive-analytics"
+  ],
+  "metadata": {
+    "langgraph_step": 4,
+    "langgraph_node": "insight_agent",
+    "langgraph_triggers": [
+      "branch:viz_agent:should_continue:insight_agent"
+    ],
+    "langgraph_path": [
+      "__pregel_pull",
+      "insight_agent"
+    ],
+    "checkpoint_ns": "insight_agent:ee0a9123-b9c4-7022-40fb-49c0e5d383bd",
+    "ls_provider": "openai",
+    "ls_model_name": "gpt-4o-mini",
+    "ls_model_type": "chat",
+    "ls_temperature": 0.4,
+    "ls_max_tokens": 1000,
+    "agent_name": "insight_agent",
+    "model": "gpt-4o-mini"
+  },
+  "model": "gpt-4o-mini",
+  "prompts": [
+    "System: You are a senior business analyst presenting insights to C-level executives.\nYour role is to translate data into actionable business insights.\n\nGuidelines:\n1. Start with the most important finding (headline)\n2. Provide 2-4 bullet points with key insights\n3. Include comparisons (vs previous period, vs average, vs benchmark)\n4. Suggest actionable recommendations when relevant\n5. Use business language, not technical jargon\n6. Highlight risks or opportunities\n\nFormat:\n- Use clear, concise sentences\n- Quantify findings with numbers\n- Avoid hedging language (\"might\", \"could\", \"possibly\")\n\nHuman: \n        You are a senior business analyst presenting insights to executives.\n        \n        User Question: Muestra la distribución de préstamos por propósito\n        \n        Data Summary:\n        Query returned 6 rows.\n        \n        \n        Sample Data (first 5 rows):\n        1. purpose: debt_consolidation, total_loans: 39855\n2. purpose: credit_card, total_loans: 19849\n3. purpose: home_improvement, total_loans: 15087\n4. purpose: major_purchase, total_loans: 10133\n5. purpose: other, total_loans: 10063\n        \n        Generate 3-5 concise business insights in bullet points.\n        Then provide 2-3 actionable recommendations.\n        \n        Format your response as:\n        \n        INSIGHTS:\n        - [insight 1]\n        - [insight 2]\n        - [insight 3]\n        \n        RECOMMENDATIONS:\n        - [recommendation 1]\n        - [recommendation 2]\n        \n        Use clear, executive-friendly language with quantified findings.\n        "
+  ],
+  "prompts_preview": [
+    "System: You are a senior business analyst presenting insights to C-level executives.\nYour role is to translate data into actionable business insights.\n\nGuidelines:\n1. Start with the most important fin..."
+  ],
+  "end_time": "2026-01-13T12:42:56.741978",
+  "generations": [
+    {
+      "text": "**INSIGHTS:**\n- Debt consolidation leads the distribution of loans, accounting for 39,855 loans, representing 41% of total loans issued.\n- Credit card loans follow as the second most common purpose, with 19,849 loans, making up 20% of the total.\n- Home improvement loans total 15,087, approximately 15% of the total, indicating a significant demand for home enhancement financing.\n- Major purchases and other purposes account for 10,133 (10%) and 10,063 (10%) loans, respectively, suggesting a diverse range of borrowing needs among consumers.\n\n**RECOMMENDATIONS:**\n- Enhance marketing efforts for debt consolidation products, as they are the most sought-after, potentially increasing market share in this segment.\n- Consider developing targeted loan products for home improvement, as this segment shows strong demand, which could attract new customers and increase loan volume.\n- Analyze the reasons behind the lower volume in major purchases and \"other\" categories to identify opportunities for product development or promotional campaigns.",
+      "text_preview": "**INSIGHTS:**\n- Debt consolidation leads the distribution of loans, accounting for 39,855 loans, representing 41% of total loans issued.\n- Credit card loans follow as the second most common purpose, w..."
+    }
+  ],
+  "llm_output": {
+    "token_usage": {
+      "completion_tokens": 208,
+      "prompt_tokens": 354,
+      "total_tokens": 562,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0
+      }
+    },
+    "model_provider": "openai",
+    "model_name": "gpt-4o-mini-2024-07-18",
+    "system_fingerprint": "fp_29330a9688",
+    "id": "chatcmpl-CxX5QJvfVGIudaeKoviPCZvTLVXDP",
+    "service_tier": "default"
+  },
+  "duration_seconds": 4.40651
+}

@@ -134,7 +134,7 @@ class QueryCache(Base):
 class UserSession(Base):
     """User session management"""
     __tablename__ = 'user_sessions'
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(UUID(as_uuid=True), unique=True, nullable=False, index=True, server_default=text('uuid_generate_v4()'))
     user_id = Column(String(100), index=True)
@@ -142,6 +142,66 @@ class UserSession(Base):
     started_at = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True, index=True)
-    
+
     def __repr__(self):
         return f"<UserSession(session_id={self.session_id}, active={self.is_active})>"
+
+
+class CustomerConnection(Base):
+    """Customer database connections for multi-tenant support"""
+    __tablename__ = 'customer_connections'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
+    user_id = Column(UUID(as_uuid=True), index=True)  # FK to user when auth is added
+    name = Column(String(200), nullable=False)
+    db_type = Column(String(20), nullable=False)  # postgresql | mysql
+    encrypted_url = Column(Text, nullable=False)  # Fernet encrypted DATABASE_URL
+    ssl_mode = Column(String(20), nullable=False, default='prefer')  # require | prefer | disable
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<CustomerConnection(id={self.id}, name={self.name}, db_type={self.db_type})>"
+
+
+class TableConfig(Base):
+    """Configuration for enabled tables in customer connections"""
+    __tablename__ = 'table_configs'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
+    connection_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # FK to customer_connections
+    table_name = Column(String(200), nullable=False)
+    schema_name = Column(String(200), nullable=False, default='public')
+    columns = Column(JSON, nullable=False)  # [{name, type}]
+    is_enabled = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_table_config_connection_enabled', 'connection_id', 'is_enabled'),
+        Index('idx_table_config_unique', 'connection_id', 'schema_name', 'table_name', unique=True),
+    )
+
+    def __repr__(self):
+        return f"<TableConfig(table={self.schema_name}.{self.table_name}, enabled={self.is_enabled})>"
+
+
+class QueryUsage(Base):
+    """Track query usage per connection for free tier limits"""
+    __tablename__ = 'query_usage'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
+    connection_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # FK to customer_connections
+    query_count = Column(Integer, nullable=False, default=0)
+    month = Column(Integer, nullable=False)  # 1-12
+    year = Column(Integer, nullable=False)  # 2024, 2025, etc
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_query_usage_unique', 'connection_id', 'year', 'month', unique=True),
+    )
+
+    def __repr__(self):
+        return f"<QueryUsage(connection_id={self.connection_id}, count={self.query_count}, period={self.year}-{self.month:02d})>"

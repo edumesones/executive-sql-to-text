@@ -13,8 +13,11 @@ from ..database.connection import test_connection
 # Get logger
 logger = get_logger("api.routes")
 
-# Create router
+# Create main router
 router = APIRouter(prefix="/api", tags=["analytics"])
+
+# Import connections router
+from .connections import router as connections_router
 
 
 @router.post("/query", response_model=QueryResponse, status_code=status.HTTP_200_OK)

@@ -119,7 +119,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 def test_connection() -> bool:
     """
     Synchronous database connection test (for health checks)
-    
+
     Returns:
         True if database is accessible, False otherwise
     """
@@ -130,3 +130,137 @@ def test_connection() -> bool:
     except Exception as e:
         print(f"Database connection test failed: {e}")
         return False
+
+
+class TenantConnectionManager:
+    """
+    Manages connections to customer databases (multi-tenant support).
+
+    Each customer can have their own database connection with connection pooling
+    and automatic retry logic.
+    """
+
+    def __init__(self):
+        self._pools = {}
+        self._session_factories = {}
+
+    async def get_engine(self, connection_id: str, database_url: str):
+        """
+        Get or create async engine for a customer connection.
+
+        Args:
+            connection_id: UUID of the customer connection
+            database_url: Decrypted database URL
+
+        Returns:
+            SQLAlchemy async engine
+        """
+        if connection_id not in self._pools:
+            # Detect database type and adjust URL
+            if database_url.startswith('postgresql://') or database_url.startswith('postgres://'):
+                # PostgreSQL
+                async_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
+            elif database_url.startswith('mysql://'):
+                # MySQL
+                async_url = database_url.replace("mysql://", "mysql+aiomysql://")
+            else:
+                raise ValueError(f"Unsupported database URL format")
+
+            # Create engine with connection pooling
+            self._pools[connection_id] = create_async_engine(
+                async_url,
+                echo=False,
+                pool_pre_ping=True,
+                pool_size=2,  # Smaller pool for customer DBs
+                max_overflow=5,
+                pool_recycle=3600  # Recycle connections every hour
+            )
+
+            # Create session factory
+            self._session_factories[connection_id] = async_sessionmaker(
+                self._pools[connection_id],
+                class_=AsyncSession,
+                expire_on_commit=False
+            )
+
+        return self._pools[connection_id]
+
+    async def get_session(self, connection_id: str, database_url: str) -> AsyncSession:
+        """
+        Get async session for a customer connection.
+
+        Args:
+            connection_id: UUID of the customer connection
+            database_url: Decrypted database URL
+
+        Returns:
+            AsyncSession
+        """
+        await self.get_engine(connection_id, database_url)
+        return self._session_factories[connection_id]()
+
+    async def execute_with_retry(
+        self,
+        connection_id: str,
+        database_url: str,
+        query: str,
+        params: Optional[dict] = None,
+        retries: int = 3
+    ):
+        """
+        Execute a query with automatic retry on connection loss.
+
+        Args:
+            connection_id: UUID of the customer connection
+            database_url: Decrypted database URL
+            query: SQL query to execute
+            params: Query parameters
+            retries: Number of retry attempts (default 3)
+
+        Returns:
+            Query result
+
+        Raises:
+            Exception: If all retries fail
+        """
+        engine = await self.get_engine(connection_id, database_url)
+        last_error = None
+
+        for attempt in range(retries):
+            try:
+                async with engine.connect() as conn:
+                    result = await conn.execute(text(query), params or {})
+                    return result
+            except Exception as e:
+                last_error = e
+                print(f"Query failed (attempt {attempt + 1}/{retries}): {e}")
+
+                if attempt < retries - 1:
+                    # Exponential backoff: 1s, 2s, 4s
+                    import asyncio
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                else:
+                    # All retries exhausted
+                    raise Exception(f"Query failed after {retries} attempts: {last_error}")
+
+    async def close_connection(self, connection_id: str):
+        """
+        Close and remove a customer connection pool.
+
+        Args:
+            connection_id: UUID of the customer connection
+        """
+        if connection_id in self._pools:
+            await self._pools[connection_id].dispose()
+            del self._pools[connection_id]
+            del self._session_factories[connection_id]
+
+    async def close_all(self):
+        """Close all customer connection pools."""
+        for conn_id in list(self._pools.keys()):
+            await self.close_connection(conn_id)
+
+
+# Global tenant connection manager
+tenant_manager = TenantConnectionManager()

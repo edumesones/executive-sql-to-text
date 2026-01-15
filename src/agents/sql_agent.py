@@ -1,8 +1,9 @@
 """
 SQL Agent - Converts natural language to SQL queries
 """
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 import re
+from uuid import UUID
 
 from .base_agent import BaseAgent
 
@@ -21,32 +22,33 @@ class SQLAgent(BaseAgent):
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate SQL query from user's natural language question
-        
+
         Args:
-            state: Current workflow state with user_query
-            
+            state: Current workflow state with user_query and optional connection_id
+
         Returns:
             State updates with sql_query and sql_explanation
         """
         user_query = state['user_query']
-        
-        # Build prompt with schema context
-        prompt = self._build_prompt(user_query)
-        
+        connection_id = state.get('connection_id')  # Optional customer connection
+
+        # Build prompt with schema context (dynamic or default)
+        prompt = self._build_prompt(user_query, connection_id=connection_id)
+
         try:
             # Get SQL from LLM
             response = self.invoke_llm(prompt)
-            
+
             # Extract and validate SQL
             sql_query = self._extract_sql(response)
             validated_sql = self._validate_sql(sql_query)
-            
+
             return {
                 "sql_query": validated_sql,
                 "sql_explanation": response,
                 "current_step": "sql_generated"
             }
-            
+
         except Exception as e:
             return {
                 "sql_query": None,
@@ -54,11 +56,46 @@ class SQLAgent(BaseAgent):
                 "current_step": "sql_error"
             }
     
-    def _build_prompt(self, user_query: str) -> str:
-        """Build the prompt with schema information"""
-        schema_info = """
+    def _build_prompt(self, user_query: str, connection_id: Optional[str] = None) -> str:
+        """
+        Build the prompt with schema information.
+
+        Args:
+            user_query: User's natural language question
+            connection_id: Optional customer connection ID for dynamic schema
+
+        Returns:
+            Formatted prompt string
+        """
+        if connection_id:
+            # Dynamic schema from customer connection
+            schema_info = self._get_dynamic_schema(connection_id)
+            db_type = "SQL"  # Generic for customer DBs
+        else:
+            # Default hardcoded schema for demo (Lending Club)
+            schema_info = self._get_default_schema()
+            db_type = "PostgreSQL"
+
+        return f"""{schema_info}
+
+        User Question: {user_query}
+
+        Generate a {db_type} SELECT query that answers this question.
+        Requirements:
+        - Use only SELECT statements
+        - Include LIMIT clause (default 1000 for safety)
+        - Use proper column names from schema
+        - Handle NULL values appropriately
+        - Format numbers and dates correctly
+
+        Return ONLY the SQL query, no explanations or markdown.
+        """
+
+    def _get_default_schema(self) -> str:
+        """Get default hardcoded schema for Lending Club demo."""
+        return """
         Available table: loans
-        
+
         Key columns:
         - loan_amnt: Loan amount in dollars (NUMERIC)
         - int_rate: Interest rate as percentage (NUMERIC)
@@ -73,35 +110,74 @@ class SQLAgent(BaseAgent):
         - dti: Debt-to-income ratio (NUMERIC)
         - home_ownership: RENT, OWN, MORTGAGE, etc. (VARCHAR)
         - emp_length: Employment length (VARCHAR)
-        
+
         Common loan_status values:
         - 'Current' - Active and up to date
         - 'Fully Paid' - Successfully completed
         - 'Charged Off' - Defaulted
         - 'Default' - In default
         - 'Late (31-120 days)' - Delinquent
-        
+
         Example queries:
         1. "Top 10 loan amounts" → SELECT loan_amnt, grade FROM loans ORDER BY loan_amnt DESC LIMIT 10
-        2. "Default rate by grade" → SELECT grade, COUNT(*) as total, 
+        2. "Default rate by grade" → SELECT grade, COUNT(*) as total,
            COUNT(CASE WHEN loan_status IN ('Charged Off', 'Default') THEN 1 END) as defaults
            FROM loans GROUP BY grade ORDER BY grade
         """
-        
-        return f"""{schema_info}
-        
-        User Question: {user_query}
-        
-        Generate a PostgreSQL SELECT query that answers this question.
-        Requirements:
-        - Use only SELECT statements
-        - Include LIMIT clause (default 1000 for safety)
-        - Use proper column names from schema
-        - Handle NULL values appropriately
-        - Format numbers and dates correctly
-        
-        Return ONLY the SQL query, no explanations or markdown.
+
+    def _get_dynamic_schema(self, connection_id: str) -> str:
         """
+        Get dynamic schema from customer connection's enabled tables.
+
+        Args:
+            connection_id: Customer connection UUID
+
+        Returns:
+            Formatted schema information string
+        """
+        try:
+            # Import here to avoid circular dependency
+            from src.database.models import TableConfig, CustomerConnection
+            from src.database.connection import db
+            from sqlalchemy import select, and_
+            import asyncio
+
+            # Run async query in sync context (for now)
+            # TODO: Make this fully async when agent workflow supports it
+            async def fetch_tables():
+                async with db.session() as session:
+                    # Get enabled tables for this connection
+                    result = await session.execute(
+                        select(TableConfig).where(
+                            and_(
+                                TableConfig.connection_id == UUID(connection_id),
+                                TableConfig.is_enabled == True
+                            )
+                        )
+                    )
+                    return result.scalars().all()
+
+            # Execute async function
+            tables = asyncio.run(fetch_tables())
+
+            if not tables:
+                return "No tables enabled for this connection. Please enable tables first."
+
+            # Build schema info from enabled tables
+            schema_parts = [f"Available tables ({len(tables)}):"]
+
+            for table in tables:
+                full_name = f"{table.schema_name}.{table.table_name}" if table.schema_name != 'public' else table.table_name
+                schema_parts.append(f"\nTable: {full_name}")
+                schema_parts.append("Columns:")
+
+                for col in table.columns:
+                    schema_parts.append(f"  - {col['name']}: {col['type']}")
+
+            return "\n".join(schema_parts)
+
+        except Exception as e:
+            return f"Error loading schema: {str(e)}\nFalling back to demo mode."
     
     def _extract_sql(self, response: str) -> str:
         """Extract SQL query from LLM response"""

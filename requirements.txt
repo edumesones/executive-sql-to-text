@@ -10,6 +10,9 @@ psycopg2-binary==2.9.10
 sqlalchemy==2.0.36
 pgvector==0.3.6
 asyncpg==0.30.0
+aiomysql==0.2.0
+pymysql==1.1.1
+cryptography==43.0.3
 
 # API
 fastapi==0.115.5

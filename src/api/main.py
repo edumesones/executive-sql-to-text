@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 
 from .routes import router
+from .connections import router as connections_router
 from .schemas import ErrorResponse
 from ..utils.logging import setup_logging, get_logger
 
@@ -54,6 +55,7 @@ logger.info("cors_configured", allowed_origins=allowed_origins)
 
 # Include routers
 app.include_router(router)
+app.include_router(connections_router)
 
 
 # Global exception handler

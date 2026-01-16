@@ -4,8 +4,8 @@ SQLAlchemy models for the Executive Analytics Assistant
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
-    Column, Integer, String, Numeric, Date, DateTime, 
-    Text, Boolean, JSON, Index, text
+    Column, Integer, String, Numeric, Date, DateTime,
+    Text, Boolean, JSON, Index, text, ForeignKey
 )
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
@@ -147,12 +147,44 @@ class UserSession(Base):
         return f"<UserSession(session_id={self.session_id}, active={self.is_active})>"
 
 
+class User(Base):
+    """User authentication table"""
+    __tablename__ = 'users'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True, index=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email}, active={self.is_active})>"
+
+
+class PasswordResetToken(Base):
+    """Password reset tokens for forgot password flow"""
+    __tablename__ = 'password_reset_tokens'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<PasswordResetToken(user_id={self.user_id}, used={self.used})>"
+
+
 class CustomerConnection(Base):
     """Customer database connections for multi-tenant support"""
     __tablename__ = 'customer_connections'
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
-    user_id = Column(UUID(as_uuid=True), index=True)  # FK to user when auth is added
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), index=True)
     name = Column(String(200), nullable=False)
     db_type = Column(String(20), nullable=False)  # postgresql | mysql
     encrypted_url = Column(Text, nullable=False)  # Fernet encrypted DATABASE_URL
@@ -170,7 +202,7 @@ class TableConfig(Base):
     __tablename__ = 'table_configs'
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
-    connection_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # FK to customer_connections
+    connection_id = Column(UUID(as_uuid=True), ForeignKey('customer_connections.id', ondelete='CASCADE'), nullable=False, index=True)
     table_name = Column(String(200), nullable=False)
     schema_name = Column(String(200), nullable=False, default='public')
     columns = Column(JSON, nullable=False)  # [{name, type}]
@@ -192,7 +224,7 @@ class QueryUsage(Base):
     __tablename__ = 'query_usage'
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'))
-    connection_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # FK to customer_connections
+    connection_id = Column(UUID(as_uuid=True), ForeignKey('customer_connections.id', ondelete='CASCADE'), nullable=False, index=True)
     query_count = Column(Integer, nullable=False, default=0)
     month = Column(Integer, nullable=False)  # 1-12
     year = Column(Integer, nullable=False)  # 2024, 2025, etc

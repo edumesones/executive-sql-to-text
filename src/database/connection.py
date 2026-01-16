@@ -151,6 +151,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+def get_database_url() -> str:
+    """Get the database URL from environment or default"""
+    return os.getenv(
+        "DATABASE_URL",
+        "postgresql://analyst:lending_secure_pass_2024@localhost:5432/lending_club"
+    )
+
+
 def test_connection() -> bool:
     """
     Synchronous database connection test (for health checks)

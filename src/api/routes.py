@@ -1,7 +1,7 @@
 """
 API Routes for Executive Analytics Assistant
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 import uuid
 import os
@@ -11,6 +11,8 @@ from ..graph import get_workflow, create_initial_state
 from ..utils.logging import get_logger
 from ..utils.custom_tracer import get_local_tracer
 from ..database.connection import test_connection
+from ..database.models import User
+from ..auth.dependencies import get_current_user
 
 # Get logger
 logger = get_logger("api.routes")
@@ -32,19 +34,26 @@ from .connections import router as connections_router
 
 
 @router.post("/query", response_model=QueryResponse, status_code=status.HTTP_200_OK)
-async def execute_query(request: QueryRequest):
+async def execute_query(
+    request: QueryRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     Execute a natural language query and return SQL, results, charts, and insights
-    
+
+    Requires authentication via JWT cookie.
+
     Args:
         request: QueryRequest with natural language query and session_id
-        
+        current_user: Authenticated user (injected by dependency)
+
     Returns:
         QueryResponse with complete analysis results
     """
     logger.info(
         "api_query_received",
         session_id=request.session_id,
+        user_id=str(current_user.id),
         query_preview=request.query[:100]
     )
     
@@ -141,21 +150,27 @@ async def health_check():
 
 
 @router.get("/history/{session_id}", response_model=List[QueryResponse])
-async def get_session_history(session_id: str):
+async def get_session_history(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
     """
     Get query history for a specific session
-    
+
+    Requires authentication via JWT cookie.
+
     Args:
         session_id: Session identifier
-        
+        current_user: Authenticated user (injected by dependency)
+
     Returns:
         List of previous queries and their results
-        
+
     Note:
         This is a placeholder. Full implementation would query
         a conversations table in the database.
     """
-    logger.info("history_requested", session_id=session_id)
+    logger.info("history_requested", session_id=session_id, user_id=str(current_user.id))
     
     # TODO: Implement database query for conversation history
     # For now, return empty list

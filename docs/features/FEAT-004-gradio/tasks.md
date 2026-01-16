@@ -5,8 +5,8 @@
 | Metric | Value |
 |--------|-------|
 | **Total Tasks** | 14 |
-| **Completed** | 13 |
-| **In Progress** | 1 |
+| **Completed** | 14 |
+| **In Progress** | 0 |
 | **Story Points** | 8 |
 
 ## Task Checklist
@@ -48,7 +48,7 @@
 | ID | Task | Status | SP | Notes |
 |----|------|--------|------|-------|
 | T-013 | Update .env.example | ✅ | 0.25 | GRADIO_APP_PORT, MAIN_APP_URL |
-| T-014 | End-to-end testing | 🔄 | 0.5 | Needs browser test |
+| T-014 | End-to-end testing | ✅ | 0.5 | Unit tests pass (54), UI tested |
 
 ## Definition of Done
 
@@ -62,7 +62,7 @@
 - [x] 1 free query works (freemium)
 - [x] Login prompt after free query
 - [x] Login redirects from landing
-- [ ] Manual browser testing
+- [x] Manual browser testing
 - [ ] PR merged
 
 ## Files Created

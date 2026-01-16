@@ -8,6 +8,7 @@ import httpx
 
 # API base URL
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+MAIN_APP_URL = os.getenv("MAIN_APP_URL", "http://localhost:7861")
 
 # =============================================================================
 # CUSTOM CSS
@@ -571,7 +572,7 @@ def register_user(email: str, password: str, confirm_password: str) -> str:
 
 
 def login_user(email: str, password: str) -> str:
-    """Login user via API"""
+    """Login user via API and redirect to main app on success"""
     if not email or not password:
         return "❌ Please fill in all fields"
 
@@ -583,12 +584,24 @@ def login_user(email: str, password: str) -> str:
             )
 
             if response.status_code == 200:
-                data = response.json()
-                return f"✅ Login successful! Welcome back."
+                # Return JavaScript redirect to main app
+                return f"""
+                <div style="text-align: center; padding: 20px;">
+                    <p style="color: #4ade80; font-size: 1.2rem;">✅ Login successful!</p>
+                    <p>Redirecting to app...</p>
+                    <script>
+                        setTimeout(function() {{
+                            window.location.href = '{MAIN_APP_URL}';
+                        }}, 1500);
+                    </script>
+                </div>
+                """
             elif response.status_code == 401:
                 return "❌ Invalid email or password"
             elif response.status_code == 403:
                 return "❌ Please verify your email first"
+            elif response.status_code == 423:
+                return "❌ Account locked. Try again later."
             else:
                 return f"❌ Login failed (status {response.status_code})"
 

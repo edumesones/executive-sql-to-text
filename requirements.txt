@@ -33,6 +33,7 @@ kaleido==0.2.1
 
 # Frontend
 streamlit==1.40.1
+gradio>=4.0.0
 
 # Utilities
 python-dotenv==1.0.1

@@ -12,7 +12,8 @@ from ..utils.logging import get_logger
 from ..utils.custom_tracer import get_local_tracer
 from ..database.connection import test_connection
 from ..database.models import User
-from ..auth.dependencies import get_current_user
+from ..auth.dependencies import get_current_user, get_current_user_optional
+from typing import Optional
 
 # Get logger
 logger = get_logger("api.routes")
@@ -99,6 +100,89 @@ async def execute_query(
         logger.error(
             "api_query_error",
             session_id=request.session_id,
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing query: {str(e)}"
+        )
+
+
+@router.post("/demo-query", response_model=QueryResponse, status_code=status.HTTP_200_OK)
+async def execute_demo_query(
+    request: QueryRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """
+    Execute a natural language query on demo database.
+
+    Works for both authenticated and anonymous users.
+    Anonymous users are tracked by session_id (frontend enforces query limit).
+
+    Args:
+        request: QueryRequest with natural language query and session_id
+        current_user: Optional authenticated user
+
+    Returns:
+        QueryResponse with complete analysis results
+    """
+    user_id = str(current_user.id) if current_user else "anonymous"
+    is_anonymous = current_user is None
+
+    logger.info(
+        "demo_query_received",
+        session_id=request.session_id,
+        user_id=user_id,
+        is_anonymous=is_anonymous,
+        query_preview=request.query[:100]
+    )
+
+    try:
+        # Get workflow
+        workflow = get_workflow()
+
+        # Create initial state
+        state = create_initial_state(
+            user_query=request.query,
+            session_id=request.session_id
+        )
+
+        # Execute workflow with local JSON tracing
+        config = {"callbacks": [local_tracer]} if local_tracer else {}
+        result = await workflow.ainvoke(state, config=config)
+
+        # Log completion
+        logger.info(
+            "demo_query_completed",
+            session_id=request.session_id,
+            user_id=user_id,
+            is_anonymous=is_anonymous,
+            success=not result.get("errors"),
+            duration_ms=result.get("metrics", {}).get("total_duration_ms", 0)
+        )
+
+        # Return response
+        return QueryResponse(
+            session_id=request.session_id,
+            sql_query=result.get("sql_query"),
+            query_results=result.get("query_results"),
+            result_count=result.get("result_count", 0),
+            derived_metrics=result.get("derived_metrics"),
+            chart_type=result.get("chart_type"),
+            chart_config=result.get("chart_config"),
+            insights=result.get("insights", []),
+            recommendations=result.get("recommendations", []),
+            errors=result.get("errors", []),
+            warnings=result.get("warnings", []),
+            metrics=result.get("metrics")
+        )
+
+    except Exception as e:
+        logger.error(
+            "demo_query_error",
+            session_id=request.session_id,
+            user_id=user_id,
             error=str(e),
             exc_info=True
         )

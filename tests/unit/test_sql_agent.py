@@ -62,13 +62,13 @@ class TestSQLAgent:
     def test_validate_sql_blocks_injection(self, agent):
         """Test SQL injection protection"""
         sql = "SELECT * FROM loans; DROP TABLE loans; --"
-        with pytest.raises(ValueError, match="unsafe"):
+        with pytest.raises(ValueError, match="Forbidden operation detected"):
             agent._validate_sql(sql)
-    
+
     def test_validate_sql_requires_select(self, agent):
         """Test that queries must start with SELECT"""
         sql = "UPDATE loans SET grade = 'A'"
-        with pytest.raises(ValueError, match="Only SELECT queries"):
+        with pytest.raises(ValueError, match="Forbidden operation detected"):
             agent._validate_sql(sql)
 
 

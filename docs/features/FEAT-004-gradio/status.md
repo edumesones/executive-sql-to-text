@@ -4,38 +4,57 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🔴 Not Started |
-| **Progress** | 0% |
-| **Branch** | `feature/gradio-migration` |
-| **PR** | - |
-| **Last Updated** | 2026-01-15 |
+| **Status** | 🟢 Ready for PR |
+| **Progress** | 100% |
+| **Branch** | `feature/004-gradio-main` |
+| **PR** | Pending |
+| **Last Updated** | 2026-01-16 |
 
 ## Progress Bar
 
 ```
-[░░░░░░░░░░░░░░░░░░░░] 0%
+[████████████████████] 100%
 ```
 
 ## Phase Progress
 
 | Phase | Tasks | Done | Progress |
 |-------|-------|------|----------|
-| 1. Setup | 3 | 0 | ⬜⬜⬜ |
-| 2. Component Migration | 6 | 0 | ⬜⬜⬜⬜⬜⬜ |
-| 3. Integration | 4 | 0 | ⬜⬜⬜⬜ |
-| 4. Polish | 3 | 0 | ⬜⬜⬜ |
+| 1. API | 2 | 2 | ✅✅ |
+| 2. Infrastructure | 3 | 3 | ✅✅✅ |
+| 3. Core UI | 4 | 4 | ✅✅✅✅ |
+| 4. Freemium | 3 | 3 | ✅✅✅ |
+| 5. Polish | 2 | 2 | ✅✅ |
 
 ## Milestone Tracking
 
 | Milestone | Target Date | Status |
 |-----------|-------------|--------|
-| Basic app working | TBD | ⬜ |
-| Voice integrated | TBD | ⬜ |
-| Auth working | TBD | ⬜ |
-| Responsive tested | TBD | ⬜ |
+| API endpoint ready | 2026-01-16 | ✅ |
+| Main app structure | 2026-01-16 | ✅ |
+| Freemium logic | 2026-01-16 | ✅ |
+| Browser tested | 2026-01-16 | ✅ |
 | Merged to main | TBD | ⬜ |
 
 ## Recent Updates
+
+### 2026-01-16 (PM)
+- Improved visual design: better color palette, Demo Info Panel grid
+- Added Voice Input accordion styling with purple gradient
+- Enhanced button styling (Analyze/Clear)
+- Fixed pytest-asyncio compatibility (upgraded to 1.3.0)
+- Fixed 2 failing tests in test_sql_agent.py
+- Created test_demo_query.py (8 tests)
+- All 54 unit tests passing
+
+### 2026-01-16 (AM)
+- Added `/api/demo-query` endpoint with optional auth
+- Created `frontend/gradio_main.py` with full UI
+- Implemented dark theme CSS
+- Added freemium query counter (1 free query)
+- Login prompt shows after free query used
+- Modified landing page login to redirect to main app
+- Updated CORS and env configuration
 
 ### 2026-01-15
 - Feature documentation created
@@ -49,9 +68,9 @@
 
 ## Next Steps
 
-1. Install gradio dependencies
-2. Create basic app structure
-3. Migrate query input component
+1. ~~Run manual browser tests~~ ✅
+2. Create PR
+3. Merge to main
 
 ## Links
 
@@ -61,4 +80,4 @@
 
 ---
 
-*Last updated: 2026-01-15*
+*Last updated: 2026-01-16*
